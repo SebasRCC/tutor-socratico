@@ -2,6 +2,7 @@
 interface FileUploaderProps {
   file: File | null;
   error: string;
+  loading: boolean;
   onFileChange: (file?: File) => void;
   onContinue: () => void;
   onCancel: () => void;
@@ -10,6 +11,7 @@ interface FileUploaderProps {
 export default function FileUploader({
   file,
   error,
+  loading,
   onFileChange,
   onContinue,
   onCancel,
@@ -61,10 +63,10 @@ export default function FileUploader({
 
         <div className="privacy-note">
           <span>ⓘ</span>
-          <p>
-            Esta versión es un prototipo. Seleccionar un archivo no lo
-            envía todavía al servidor.
-          </p>
+            <p>
+              Tu material se utilizará para preparar la sesión de aprendizaje
+              y generar preguntas basadas en su contenido.
+            </p>
         </div>
 
         <div className="card-actions">
@@ -73,10 +75,11 @@ export default function FileUploader({
           </button>
           <button
             className="primary-button"
-            disabled={!file}
+            disabled={!file || loading}
             onClick={onContinue}
           >
-            Continuar <span>→</span>
+            {loading ? "Preparando material..." : "Continuar"}
+            {!loading && <span> →</span>}
           </button>
         </div>
       </div>

@@ -7,7 +7,7 @@ interface Objective {
 interface Topic {
   id: string;
   label: string;
-  description: string;
+  description?: string;
   objectives: Objective[];
 }
 
@@ -65,7 +65,7 @@ export default function TopicSelector({
               {selectedTopic === topic.id ? "✓" : "+"}
             </span>
             <strong>{topic.label}</strong>
-            <span>{topic.description}</span>
+            <span>{topic.description ?? "Explora este tema y sus objetivos de aprendizaje."}</span>
           </button>
         ))}
       </div>

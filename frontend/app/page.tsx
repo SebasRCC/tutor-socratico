@@ -1,95 +1,51 @@
 
 "use client";
 
+import { useState } from "react";
+
+import FileUploader from "@/components/FileUploader";
+import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import TopicSelector from "@/components/TopicSelector";
 import TutorPanel from "@/components/TutorPanel";
-import { useState } from "react";
-import FileUploader from "../components/FileUploader";
-import Header from "../components/Header";
-import WelcomeScreen from "../components/WelcomeScreen";
+import WelcomeScreen from "@/components/WelcomeScreen";
 
-type Stage = "welcome" | "upload" | "topics" | "tutor";
+import {
+  createSession,
+  getTopics,
+  sendTutorResponse,
+  startLearningGoal,
+  uploadSource,
+} from "@/lib/api";
 
-const demoTopics = [
-  {
-    id: "t1",
-    label: "Fundamentos del tema",
-    description: "Comprende las ideas esenciales y sus relaciones.",
-    objectives: [
-      { id: "o1", label: "Explicar los conceptos principales" },
-      { id: "o2", label: "Relacionar conceptos con ejemplos" },
-    ],
-  },
-  {
-    id: "t2",
-    label: "Aplicación práctica",
-    description: "Lleva la teoría a situaciones concretas.",
-    objectives: [
-      { id: "o3", label: "Resolver un caso práctico" },
-      { id: "o4", label: "Justificar una solución" },
-    ],
-  },
-  {
-    id: "t3",
-    label: "Análisis y reflexión",
-    description: "Profundiza, compara y evalúa ideas.",
-    objectives: [
-      { id: "o5", label: "Comparar diferentes perspectivas" },
-      { id: "o6", label: "Argumentar una conclusión" },
-    ],
-  },
-];
-
-const demoQuestions = [
-  {
-    message:
-      "Imagina que debes explicar este concepto a alguien que nunca lo ha estudiado. ¿Qué idea considerarías indispensable para que pueda comprenderlo?",
-    options: [
-      "Empezaría por definir el concepto con mis propias palabras.",
-      "Presentaría primero un ejemplo de la vida cotidiana.",
-      "Explicaría directamente todos los detalles técnicos.",
-    ],
-  },
-  {
-    message:
-      "Interesante. Ahora pensemos en tu explicación: ¿cómo comprobarías que ese concepto realmente se entiende?",
-    options: [
-      "Pediría que se explique la idea con otras palabras.",
-      "Buscaría un caso donde el concepto no se cumpla.",
-      "Repetiría la definición hasta memorizarla.",
-    ],
-  },
-  {
-    message:
-      "Vamos un paso más allá. ¿Qué harías si encuentras un ejemplo que contradice tu explicación inicial?",
-    options: [
-      "Revisaría mis supuestos y buscaría nueva evidencia.",
-      "Ignoraría el ejemplo porque no coincide con mi idea.",
-      "Cambiaría mi conclusión sin analizar el caso.",
-    ],
-  },
-];
+import type {
+  Stage,
+  Topic,
+  TutorHistoryItem,
+  TutorTurn,
+} from "@/types/tutor";
 
 export default function Home() {
+  // Estado de la sesión y del tutor
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentTurn, setCurrentTurn] = useState<TutorTurn | null>(null);
+  const [topics, setTopics] = useState<Topic[]>([]);
+
+  // Estado de la interfaz
   const [stage, setStage] = useState<Stage>("welcome");
   const [file, setFile] = useState<File | null>(null);
   const [selectedTopic, setSelectedTopic] = useState("");
   const [selectedObjective, setSelectedObjective] = useState("");
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [feedback, setFeedback] = useState("");
-  const [history, setHistory] = useState<
-    { question: string; answer: string; feedback: string }[]
-  >([]);
+  const [history, setHistory] = useState<TutorHistoryItem[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const currentTopic = demoTopics.find(
+  const currentTopic = topics.find(
     (topic) => topic.id === selectedTopic,
   );
 
-  const currentQuestion =
-    demoQuestions[questionIndex % demoQuestions.length];
-
+  // Selección y validación del archivo
   function handleFileChange(selectedFile?: File) {
     setError("");
 
@@ -104,76 +60,170 @@ export default function Home() {
     setFile(selectedFile);
   }
 
-  function startTutor() {
-    if (!selectedTopic || !selectedObjective) {
+  // Crear sesión, subir material y obtener temas
+
+  async function handleContinueUpload() {
+    if (!file) {
+      setError("Selecciona un archivo Markdown para continuar.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const session = await createSession();
+      setSessionId(session.sessionId);
+
+      await uploadSource(session.sessionId, file);
+
+      const result = await getTopics(session.sessionId);
+      setTopics(result.topics);
+
+      setSelectedTopic("");
+      setSelectedObjective("");
+      setStage("topics");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo preparar la sesión.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // Iniciar la tutoría con el tema y objetivo elegidos
+
+  async function startTutor() {
+    if (!sessionId || !selectedTopic || !selectedObjective) {
       setError("Selecciona un tema y un objetivo para continuar.");
       return;
     }
 
+    setLoading(true);
     setError("");
-    setFeedback("");
-    setHistory([]);
-    setQuestionIndex(0);
-    setStage("tutor");
+
+    try {
+      const result = await startLearningGoal(
+        sessionId,
+        selectedTopic,
+        selectedObjective,
+      );
+
+      setCurrentTurn(result.turn);
+      setFeedback(result.feedback ?? "");
+      setHistory([]);
+      setStage("tutor");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo iniciar la tutoría.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function answerQuestion(option: string) {
-    const responseFeedback =
-      "¡Gracias por compartir tu razonamiento! Lo importante no es solo elegir una respuesta, sino comprender por qué la eliges. Sigamos explorando la idea.";
 
-    setHistory((previous) => [
-      ...previous,
-      {
-        question: currentQuestion.message,
-        answer: option,
-        feedback: responseFeedback,
-      },
-    ]);
+  // Enviar una respuesta y recibir la siguiente pregunta
+  async function answerQuestion(optionLabel: string) {
+    if (!sessionId || !currentTurn || loading) return;
 
-    setFeedback(responseFeedback);
-    setQuestionIndex((previous) => previous + 1);
+    const answeredTurn = currentTurn;
+
+    const selectedOption = answeredTurn.options.find(
+      (option) => option.label === optionLabel,
+    );
+
+    if (!selectedOption) {
+      setError("No se encontró la opción seleccionada.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await sendTutorResponse(
+        sessionId,
+        answeredTurn.turnId,
+        selectedOption.id,
+      );
+
+      setHistory((previous) => [
+        ...previous,
+        {
+          question: answeredTurn.message,
+          answer: selectedOption.label,
+          feedback: result.feedback,
+        },
+      ]);
+
+      setFeedback(result.feedback);
+      setCurrentTurn(result.turn);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo enviar la respuesta.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
+
+  // Reiniciar la aplicación
 
   function resetApp() {
     setStage("welcome");
+    setSessionId(null);
+    setCurrentTurn(null);
+    setTopics([]);
     setFile(null);
     setSelectedTopic("");
     setSelectedObjective("");
-    setQuestionIndex(0);
     setFeedback("");
     setHistory([]);
     setError("");
+    setLoading(false);
   }
 
 
   return (
     <main className="app-shell">
-    <Sidebar stage={stage} onReset={resetApp} />
+      <Sidebar stage={stage} onReset={resetApp} />
 
       <section className="main-area">
-      <Header stage={stage} />
+        <Header stage={stage} />
 
         <div className="content">
           {stage === "welcome" && (
-            <WelcomeScreen onStart={() => setStage("upload")} />
+            <WelcomeScreen
+              onStart={() => setStage("upload")}
+            />
           )}
 
           {stage === "upload" && (
             <FileUploader
               file={file}
               error={error}
+              loading={loading}
               onFileChange={handleFileChange}
-              onCancel={() => setStage("welcome")}
-              onContinue={() => {
+              onCancel={() => {
                 setError("");
-                setStage("topics");
+                setStage("welcome");
               }}
+              onContinue={handleContinueUpload}
             />
           )}
 
           {stage === "topics" && (
             <TopicSelector
-              topics={demoTopics}
+              topics={topics}
               selectedTopic={selectedTopic}
               selectedObjective={selectedObjective}
               error={error}
@@ -184,20 +234,27 @@ export default function Home() {
               }}
               onObjectiveChange={setSelectedObjective}
               onStart={startTutor}
-              onBack={() => setStage("upload")}
+              onBack={() => {
+                setError("");
+                setStage("upload");
+              }}
             />
           )}
 
-          {stage === "tutor" && (
+
+          {stage === "tutor" && currentTurn && (
             <TutorPanel
-              question={currentQuestion}
+              question={{
+                message: currentTurn.message,
+                options: currentTurn.options.map((option) => option.label),
+              }}
               history={history}
-              questionIndex={questionIndex}
+              questionIndex={history.length}
               feedback={feedback}
               topicLabel={currentTopic?.label ?? ""}
               objectiveLabel={
                 currentTopic?.objectives.find(
-                  (objective) => objective.id === selectedObjective
+                  (objective) => objective.id === selectedObjective,
                 )?.label ?? ""
               }
               onAnswer={answerQuestion}
@@ -206,9 +263,23 @@ export default function Home() {
             />
           )}
 
+
+          {loading && (
+            <p role="status">Preparando tu sesión...</p>
+          )}
+
+          {error && (
+            <p className="error-message" role="alert">
+              {error}
+            </p>
+          )}
+
           <footer className="app-footer">
-            <span>SOCRIA © 2026</span>
-            <span>Hecho para aprender pensando <span className="footer-star">✳</span></span>
+            <span>:v</span>
+            <span>
+              Hecho para aprender pensando{" "}
+              <span className="footer-star">✳</span>
+            </span>
           </footer>
         </div>
       </section>
