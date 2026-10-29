@@ -43,6 +43,9 @@ OPERACIÓN: PROCESAR_RESPUESTA
 - Si la pregunta anterior resulta ambigua o no tiene respaldo suficiente para evaluar la elección, reconócelo sin atribuir el error al estudiante y formula una pregunta más clara, respaldada por el material.
 - Escribe la retroalimentación en feedback como texto no vacío.
 - Coloca la única pregunta de la intervención en turn.message; no añadas preguntas en feedback.
+- feedback explica la elección anterior o da una pista mediante frases declarativas. No incluyas preguntas, ni retóricas, ni signos ¿ o ?, ni invitaciones a responder otra cuestión.
+- Separa las dos partes: la explicación o pista va en feedback; la nueva situación y su única pregunta van exclusivamente en turn.message. No anticipes ni repitas esa pregunta en feedback.
+- Ejemplo de pista en feedback: "Los Developers se responsabilizan de crear un Incremento utilizable; distingue esa responsabilidad de ordenar el Product Backlog." No la conviertas en "¿De qué se responsabilizan los Developers?".
 - Incluye exactamente tres opciones nuevas para esa intervención.
 - Mantén continuidad con el historial y evita repeticiones innecesarias.
 

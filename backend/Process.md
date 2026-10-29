@@ -185,6 +185,14 @@ Documentamos la configuración en ambos `.env.example`, sin claves, y el arranqu
 
 **Comprobaciones:** ambos proyectos compilan; Next.js confirma la carga de `.env.local`. Se verificaron `PORT=3001` y la presencia de claves en el entorno del backend sin mostrarlas. El servidor en `3001` respondió al preflight CORS con `204`, a crear sesión con `201` y a consultar temas con `200`. Además, las funciones originales `createSession()` y `getTopics()` de `lib/api.ts` se ejecutaron contra el backend real. En esta etapa no se repitió la prueba completa con LLM desde la interfaz visual.
 
+## 10. Separar retroalimentación y pregunta, y conservar el diálogo visible
+
+Cambiamos el encabezado fijo de `TutorPanel.tsx` a **Retroalimentación** y eliminamos **Continuar reflexionando**, cuyo único efecto era borrar el feedback visible. El panel ahora utiliza el tipo compartido `TutorHistoryItem` y muestra el feedback de cada turno después de su respuesta. Quitamos el estado duplicado y la acción de borrado en `page.tsx`; las retroalimentaciones anteriores permanecen visibles, sin duplicar la última.
+
+El prompt ya indicaba que la única pregunta debía estar en `turn.message`. Reforzamos esa separación con instrucciones y un ejemplo de pista declarativa. Añadimos una validación en `TutorService` que rechaza feedback con `¿` o `?` mediante `502 / INVALID_LLM_OUTPUT`, conservando historial y turno para reintentar. Esta comprobación detecta signos de interrogación; la separación semántica sigue dependiendo del prompt. No se cambia el contrato ni se añade un indicador de acierto.
+
+Verificamos la compilación de ambos proyectos, ESLint de los archivos modificados y el renderizado del panel con dos turnos: cada feedback aparece una vez, en orden, sin el título ni el botón anteriores. Añadimos casos de regresión para preguntas en feedback, comprobando rechazo, conservación del estado y reintento.
+
 ## Punto de continuación
 
 Tanto la primera intervención como el feedback y las intervenciones siguientes usan RAG y LLM. Las sesiones, temas, historial y bloqueos siguen en memoria y se pierden al reiniciar; el bloqueo protege un único proceso de Nest. El índice SQLite permanece en disco, pero todavía no se recuperan sesiones tras un reinicio. La calidad pedagógica y el límite de 100 palabras se solicitan mediante el prompt; la validación de código verifica el formato y los campos indicados.

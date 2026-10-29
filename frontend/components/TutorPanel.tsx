@@ -1,23 +1,17 @@
+import type { TutorHistoryItem } from "@/types/tutor";
 
 interface TutorQuestion {
   message: string;
   options: string[];
 }
 
-interface TutorHistoryItem {
-  question: string;
-  answer: string;
-}
-
 interface TutorPanelProps {
   question: TutorQuestion;
   history: TutorHistoryItem[];
   questionIndex: number;
-  feedback: string;
   topicLabel: string;
   objectiveLabel: string;
   onAnswer: (option: string) => void;
-  onClearFeedback: () => void;
   onReset: () => void;
 }
 
@@ -25,11 +19,9 @@ export default function TutorPanel({
   question,
   history,
   questionIndex,
-  feedback,
   topicLabel,
   objectiveLabel,
   onAnswer,
-  onClearFeedback,
   onReset,
 }: TutorPanelProps) {
   const progress = Math.min(history.length * 20, 100);
@@ -102,30 +94,20 @@ export default function TutorPanel({
                   </div>
                   <div className="student-avatar">Tú</div>
                 </div>
+                {item.feedback && (
+                  <div className="chat-message tutor-message">
+                    <div className="chat-avatar">✳</div>
+                    <div className="chat-message-content">
+                      <span className="chat-author">Tutor socrático</span>
+                      <div className="chat-bubble feedback-bubble">
+                        <strong>Retroalimentación</strong>
+                        <p>{item.feedback}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
-
-            {/* Retroalimentación de la última respuesta */}
-            {feedback && (
-              <div className="chat-message tutor-message">
-                <div className="chat-avatar">✳</div>
-                <div className="chat-message-content">
-                  <span className="chat-author">
-                    Tutor socrático · Reflexión
-                  </span>
-                  <div className="chat-bubble feedback-bubble">
-                    <strong>Sigamos profundizando</strong>
-                    <p>{feedback}</p>
-                    <button
-                      className="text-button"
-                      onClick={onClearFeedback}
-                    >
-                      Continuar reflexionando →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Pregunta actual */}
             <div className="chat-message tutor-message">

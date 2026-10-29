@@ -173,6 +173,10 @@ export class TutorService {
     ) {
       throw invalidOutput();
     }
+    // Evita publicar una segunda pregunta dentro de la retroalimentación.
+    if (isText(raw.feedback) && /[¿?]/u.test(raw.feedback)) {
+      throw invalidOutput();
+    }
     return {
       feedback:
         operation === 'PRIMERA_INTERVENCION'

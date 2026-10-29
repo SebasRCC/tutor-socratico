@@ -36,7 +36,6 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [selectedTopic, setSelectedTopic] = useState("");
   const [selectedObjective, setSelectedObjective] = useState("");
-  const [feedback, setFeedback] = useState("");
   const [history, setHistory] = useState<TutorHistoryItem[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -114,7 +113,6 @@ export default function Home() {
       );
 
       setCurrentTurn(result.turn);
-      setFeedback(result.feedback ?? "");
       setHistory([]);
       setStage("tutor");
     } catch (err) {
@@ -163,7 +161,6 @@ export default function Home() {
         },
       ]);
 
-      setFeedback(result.feedback);
       setCurrentTurn(result.turn);
     } catch (err) {
       setError(
@@ -186,7 +183,6 @@ export default function Home() {
     setFile(null);
     setSelectedTopic("");
     setSelectedObjective("");
-    setFeedback("");
     setHistory([]);
     setError("");
     setLoading(false);
@@ -250,7 +246,6 @@ export default function Home() {
               }}
               history={history}
               questionIndex={history.length}
-              feedback={feedback}
               topicLabel={currentTopic?.label ?? ""}
               objectiveLabel={
                 currentTopic?.objectives.find(
@@ -258,7 +253,6 @@ export default function Home() {
                 )?.label ?? ""
               }
               onAnswer={answerQuestion}
-              onClearFeedback={() => setFeedback("")}
               onReset={resetApp}
             />
           )}

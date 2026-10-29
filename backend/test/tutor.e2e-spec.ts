@@ -288,6 +288,11 @@ describe('Tutoría y respuestas (e2e)', () => {
     ],
     ['feedback null', result(null)],
     ['feedback vacío', result('  ')],
+    [
+      'pregunta en feedback',
+      result('Revisa tu elección. ¿Qué hacen los Developers?'),
+    ],
+    ['pregunta sin signo de apertura', result('Qué hacen los Developers?')],
     ['feedback numérico', { ...result(null), feedback: 5 }],
     ['error desconocido', { error: { code: 'OTHER', message: 'error' } }],
   ];
