@@ -49,3 +49,8 @@ async function embedTexts(
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   return embedTexts(texts, 'document');
 }
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+  const [embedding] = await embedTexts([text], 'query');
+  return embedding;
+}

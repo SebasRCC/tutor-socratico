@@ -15,3 +15,7 @@ export interface IndexedChunk extends Chunk {
   sessionId: string;
   sourceId: string;
 }
+
+export interface RetrievedChunk extends IndexedChunk {
+  score: number;
+}

@@ -17,6 +17,7 @@ import type { TutorResponseDto } from './dto/session-responses.dto';
 import { SessionsService } from './sessions.service';
 import { RagService } from '../rag/rag.service';
 import { LlmService } from '../llm/llm.service';
+import { TutorService } from './tutor.service';
 
 @Controller('sessions')
 export class SessionsController {
@@ -24,6 +25,7 @@ export class SessionsController {
     private readonly sessionsService: SessionsService,
     private readonly ragService: RagService,
     private readonly llmService: LlmService,
+    private readonly tutorService: TutorService,
   ) {}
 
   @Post(':sessionId/sources')
@@ -60,9 +62,8 @@ export class SessionsController {
   selectGoal(
     @Param('sessionId') sessionId: string,
     @Body() dto: SelectLearningGoalDto,
-  ): TutorResponseDto {
-    this.sessionsService.selectLearningGoal(sessionId, dto);
-    return this.sessionsService.saveTurn(this.mockTurn(sessionId, null));
+  ): Promise<TutorResponseDto> {
+    return this.tutorService.start(sessionId, dto);
   }
 
   @Post(':sessionId/responses')

@@ -3,7 +3,23 @@ import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { EMBEDDING_DIMENSIONS, type IndexedChunk } from './rag.types';
+import {
+  EMBEDDING_DIMENSIONS,
+  type IndexedChunk,
+  type RetrievedChunk,
+} from './rag.types';
+
+interface SearchRow {
+  id: string;
+  session_id: string;
+  source_id: string;
+  content: string;
+  source: string;
+  heading: string;
+  position: number;
+  char_count: number;
+  distance: number;
+}
 
 export class VectorStore implements OnModuleDestroy {
   private readonly db: Database.Database;
@@ -86,6 +102,46 @@ export class VectorStore implements OnModuleDestroy {
     this.db.transaction(() => {
       chunks.forEach((chunk, index) => this.insert(chunk, embeddings[index]));
     })();
+  }
+
+  hasChunks(sessionId: string): boolean {
+    return Boolean(
+      this.db
+        .prepare('SELECT 1 FROM chunks WHERE session_id = ? LIMIT 1')
+        .get(sessionId),
+    );
+  }
+
+  search(
+    sessionId: string,
+    queryEmbedding: number[],
+    topK: number,
+  ): RetrievedChunk[] {
+    const vector = new Float32Array(queryEmbedding);
+    // El filtro de sesión se aplica dentro de la búsqueda vectorial, antes de topK.
+    const rows = this.db
+      .prepare(
+        `
+      SELECT c.*, e.distance FROM chunk_embeddings e
+      JOIN chunks c ON c.id = e.chunk_id AND c.session_id = e.session_id
+      WHERE e.embedding MATCH ? AND k = ? AND e.session_id = ?
+      ORDER BY e.distance
+    `,
+      )
+      .all(Buffer.from(vector.buffer), topK, sessionId) as SearchRow[];
+    return rows.map((row) => ({
+      id: row.id,
+      sessionId: row.session_id,
+      sourceId: row.source_id,
+      content: row.content,
+      metadata: {
+        source: row.source,
+        heading: row.heading,
+        position: row.position,
+        charCount: row.char_count,
+      },
+      score: 1 - row.distance / 2,
+    }));
   }
 
   onModuleDestroy(): void {

@@ -57,7 +57,27 @@ export class SessionsService {
     return this.getSession(sessionId).topics;
   }
 
+  validateLearningGoal(sessionId: string, dto: SelectLearningGoalDto) {
+    const topic = this.getSession(sessionId).topics.find(
+      (item) => item.id === dto.topicId,
+    );
+    const objective = topic?.objectives.find(
+      (item) => item.id === dto.objectiveId,
+    );
+    if (!topic || !objective) {
+      throw new BadRequestException({
+        error: {
+          code: 'INVALID_LEARNING_GOAL',
+          message:
+            'El tema y objetivo no pertenecen a esta sesión o no corresponden entre sí',
+        },
+      });
+    }
+    return { topic, objective };
+  }
+
   selectLearningGoal(sessionId: string, dto: SelectLearningGoalDto): void {
+    this.validateLearningGoal(sessionId, dto);
     const session = this.getSession(sessionId);
     session.topicId = dto.topicId;
     session.objectiveId = dto.objectiveId;

@@ -8,7 +8,11 @@ import {
   TOPICS_PROMPT,
   TOPICS_OUTPUT_SCHEMA,
 } from '../chat/prompts/topics.prompt';
-import type { GeneratedTopic } from './llm.types';
+import type { GeneratedTopic, GeneratedIntervention } from './llm.types';
+import {
+  SOCRATIC_TUTOR_PROMPT,
+  INTERVENTION_OUTPUT_SCHEMA,
+} from '../chat/prompts/socratic-tutor.prompt';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -24,11 +28,13 @@ function hasLabel(
   );
 }
 
-function invalidOutput(): BadGatewayException {
+function invalidOutput(
+  message = 'No se pudieron generar temas y objetivos válidos',
+): BadGatewayException {
   return new BadGatewayException({
     error: {
       code: 'INVALID_LLM_OUTPUT',
-      message: 'No se pudieron generar temas y objetivos válidos',
+      message,
     },
   });
 }
@@ -36,7 +42,11 @@ function invalidOutput(): BadGatewayException {
 @Injectable()
 export class LlmService {
   async generateTopics(academicText: string): Promise<GeneratedTopic[]> {
-    const text = await this.askClaude(academicText, TOPICS_PROMPT);
+    const text = await this.askClaude(
+      academicText,
+      TOPICS_PROMPT,
+      TOPICS_OUTPUT_SCHEMA,
+    );
     let result: unknown;
     try {
       result = JSON.parse(text);
@@ -71,9 +81,47 @@ export class LlmService {
     });
   }
 
+  async generateIntervention(
+    topic: string,
+    objective: string,
+    fragments: string[],
+  ): Promise<GeneratedIntervention> {
+    const errorMessage = 'No se pudo generar una intervención válida';
+    const text = await this.askClaude(
+      JSON.stringify({ topic, objective, fragments }),
+      SOCRATIC_TUTOR_PROMPT,
+      INTERVENTION_OUTPUT_SCHEMA,
+      errorMessage,
+    );
+    let result: unknown;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      throw invalidOutput(errorMessage);
+    }
+    if (
+      !isObject(result) ||
+      typeof result.message !== 'string' ||
+      !result.message.trim() ||
+      !Array.isArray(result.options) ||
+      result.options.length !== 3
+    ) {
+      throw invalidOutput(errorMessage);
+    }
+    return {
+      message: result.message.trim(),
+      options: result.options.map((option: unknown) => {
+        if (!hasLabel(option)) throw invalidOutput(errorMessage);
+        return { label: option.label.trim() };
+      }),
+    };
+  }
+
   private async askClaude(
     prompt: string,
     systemPrompt: string,
+    schema: Record<string, unknown>,
+    errorMessage?: string,
   ): Promise<string> {
     let response: Anthropic.Message;
     try {
@@ -83,7 +131,7 @@ export class LlmService {
         max_tokens: 1024,
         system: systemPrompt,
         output_config: {
-          format: { type: 'json_schema', schema: TOPICS_OUTPUT_SCHEMA },
+          format: { type: 'json_schema', schema },
         },
         messages: [{ role: 'user', content: prompt }],
       });
@@ -103,7 +151,7 @@ export class LlmService {
       textBlock.type !== 'text' ||
       response.stop_reason === 'max_tokens'
     ) {
-      throw invalidOutput();
+      throw invalidOutput(errorMessage);
     }
     return textBlock.text;
   }

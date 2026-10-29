@@ -120,6 +120,35 @@ curl.exe http://localhost:3000/api/sessions/SESSION_ID/topics
 
 **Comprobaciones:** compilación, ESLint y 27 pruebas de integración correctos, incluyendo salidas inválidas y conservación del catálogo previo. La prueba final con VoyageAI y Anthropic reales devolvió `201`, 6 fragmentos, tres temas y dos objetivos por tema. Dos consultas devolvieron exactamente los mismos IDs y otra sesión sin material devolvió la lista vacía. Se utilizó SQLite en memoria para esa prueba.
 
+## 7. Generar la primera intervención con RAG y LLM
+
+Sustituimos la primera respuesta simulada de `POST /sessions/:sessionId/learning-goal`. `SessionsService.validateLearningGoal()` comprueba que el tema pertenezca a la sesión y el objetivo a ese tema, sin modificar el estado. Una selección inválida devuelve `400` con `INVALID_LEARNING_GOAL`.
+
+Reutilizamos el flujo de `retrieveContext()` de `src/rag/retriever.ts` del repo: generar el embedding de la consulta, buscar vecinos y recuperar fragmentos con su puntuación. Lo adaptamos dentro de `RagService`, usando el `VectorStore` registrado en Nest. También recuperamos `generateEmbedding()` para consultas de VoyageAI (`inputType: query`). La búsqueda combina los textos del tema y objetivo y filtra por `sessionId` dentro de SQLite, antes de elegir los cinco resultados más cercanos.
+
+Como criterio inicial de contexto suficiente, exigimos al menos un fragmento no vacío con `score >= 0.5`, usando la fórmula del repo: `1 - distancia / 2`. Es un umbral heurístico de la PoC, no una garantía de suficiencia pedagógica. Si no hay fragmentos que lo cumplan, devolvemos `422` con `INSUFFICIENT_CONTEXT`, sin llamar al LLM.
+
+Creamos `TutorService` para coordinar selección → recuperación → generación → guardado. Adaptamos `SOCRATIC_TUTOR_PROMPT` desde `src/llm/prompts.ts`: el tema ya está elegido; se pide una situación breve, una sola pregunta y tres opciones, sin pistas adicionales, cambio de tema, IDs ni fuentes. `LlmService.generateIntervention()` utiliza la llamada existente a Anthropic con JSON estructurado y valida un `message` no vacío y exactamente tres opciones con labels no vacíos. Una salida inválida devuelve `502` con `INVALID_LLM_OUTPUT`.
+
+Nest genera `turnId` y los IDs de opciones. Las fuentes se construyen exclusivamente desde los fragmentos enviados al modelo, con `sourceId`, nombre y `chunkId`. Solo tras validar la intervención se guardan selección, mensaje del asistente y turno actual. Antes de guardar se vuelve a validar la selección por si el catálogo cambió durante la llamada externa.
+
+**Flujo:** crear sesión → cargar material → consultar `/topics` → enviar IDs a `/learning-goal` → recuperar contexto de esa sesión → generar y validar la intervención → devolver `200` con `{ sessionId, feedback: null, turn }`. `/current-turn` devuelve esa misma intervención sin generar ni añadir mensajes. `/responses` continúa simulado.
+
+Para probar con `$base` y `$id` de una sesión que ya tenga material, ejecutar cada comando por separado:
+
+```powershell
+$catalogo = Invoke-RestMethod "$base/sessions/$id/topics"
+$seleccion = @{ topicId = $catalogo.topics[0].id; objectiveId = $catalogo.topics[0].objectives[0].id } | ConvertTo-Json
+$primera = Invoke-RestMethod -Method Post -Uri "$base/sessions/$id/learning-goal" -ContentType "application/json" -Body $seleccion
+$primera | ConvertTo-Json -Depth 10
+$actual = Invoke-RestMethod "$base/sessions/$id/current-turn"
+($primera.turn | ConvertTo-Json -Depth 10 -Compress) -eq ($actual.turn | ConvertTo-Json -Depth 10 -Compress)
+```
+
+La comparación debe devolver `True`.
+
+**Comprobaciones:** compilación, ESLint y 40 pruebas de integración correctos. Se verificaron aislamiento de contexto, fuentes reales, selección inválida sin cambios, errores de proveedores y salidas mal formadas sin guardar estado. La prueba con `scrum.md`, VoyageAI y Anthropic reales devolvió `200`, tres opciones y cinco fuentes de los seis fragmentos indexados; `/current-turn` coincidió y una selección inválida conservó la sesión. La prueba utilizó SQLite en memoria.
+
 ## Punto de continuación
 
-Las sesiones, los temas y el historial siguen en memoria y se pierden al reiniciar el servidor. El índice SQLite sí permanece en disco, pero aún no existe recuperación de sesiones tras un reinicio. Ya se indexan fuentes y se generan y consultan temas/objetivos reales. Las preguntas y el feedback del tutor siguen simulados; aún no se comprueba la pertenencia del objetivo seleccionado al catálogo ni se recuperan fragmentos para generar intervenciones. El recuperador, el prompt socrático y la coordinación en `tutor.service.ts` quedan para etapas posteriores.
+La primera intervención ya usa RAG y LLM. El siguiente paso será sustituir el feedback y la siguiente intervención simulados de `/responses`. Las sesiones, los temas y el historial siguen en memoria y se pierden al reiniciar; el índice SQLite permanece en disco, pero todavía no se recuperan sesiones tras un reinicio.

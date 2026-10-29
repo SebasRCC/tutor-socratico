@@ -6,6 +6,9 @@ import { AppModule } from '../src/app.module';
 import { SessionsService } from '../src/chat/sessions.service';
 import { VectorStore } from '../src/rag/vector-store';
 import type { TutorResponseDto } from '../src/chat/dto/session-responses.dto';
+import { LlmService } from '../src/llm/llm.service';
+import * as embeddings from '../src/rag/embeddings';
+import { EMBEDDING_DIMENSIONS } from '../src/rag/rag.types';
 
 describe('Sesiones e historial (e2e)', () => {
   let app: INestApplication<App>;
@@ -25,10 +28,23 @@ describe('Sesiones e historial (e2e)', () => {
     );
     await app.init();
     sessions = app.get(SessionsService);
+    jest
+      .spyOn(embeddings, 'generateEmbedding')
+      .mockResolvedValue(Array<number>(EMBEDDING_DIMENSIONS).fill(0.25));
+    jest.spyOn(app.get(LlmService), 'generateIntervention').mockResolvedValue({
+      message:
+        'Un equipo recibe varias solicitudes. ¿Quién ordena el Product Backlog?',
+      options: [
+        { label: 'Product Owner' },
+        { label: 'Scrum Master' },
+        { label: 'Developers' },
+      ],
+    });
   });
 
   afterEach(async () => {
     await app.close();
+    jest.restoreAllMocks();
   });
 
   async function createSession(): Promise<string> {
@@ -39,9 +55,28 @@ describe('Sesiones e historial (e2e)', () => {
   }
 
   async function selectGoal(id: string): Promise<TutorResponseDto> {
+    sessions.saveTopics(id, [
+      { label: 'Scrum', objectives: [{ label: 'Roles' }] },
+    ]);
+    const topic = sessions.getTopics(id)[0];
+    app.get(VectorStore).insert(
+      {
+        id: `${id}-chunk`,
+        sessionId: id,
+        sourceId: `${id}-source`,
+        content: 'El Product Owner ordena el Product Backlog.',
+        metadata: {
+          source: 'scrum.md',
+          heading: 'Roles',
+          position: 0,
+          charCount: 47,
+        },
+      },
+      Array<number>(EMBEDDING_DIMENSIONS).fill(0.25),
+    );
     const response = await request(app.getHttpServer())
       .post(`/api/sessions/${id}/learning-goal`)
-      .send({ topicId: 'scrum', objectiveId: 'roles' })
+      .send({ topicId: topic.id, objectiveId: topic.objectives[0].id })
       .expect(200);
     return response.body as TutorResponseDto;
   }
@@ -59,11 +94,11 @@ describe('Sesiones e historial (e2e)', () => {
     const turn = await selectGoal(first);
     await request(app.getHttpServer())
       .post(`/api/sessions/${first}/responses`)
-      .send({ turnId: turn.turn.turnId, optionId: 'opt_1' })
+      .send({ turnId: turn.turn.turnId, optionId: turn.turn.options[0].id })
       .expect(200);
     expect(sessions.getSession(first)).toMatchObject({
-      topicId: 'scrum',
-      objectiveId: 'roles',
+      topicId: sessions.getTopics(first)[0].id,
+      objectiveId: sessions.getTopics(first)[0].objectives[0].id,
     });
     expect(sessions.getSession(first).conversation.getHistory()).toHaveLength(
       3,
@@ -82,7 +117,10 @@ describe('Sesiones e historial (e2e)', () => {
   it('registra ID, texto y feedback; rechaza responder dos veces el mismo turno', async () => {
     const id = await createSession();
     const first = await selectGoal(id);
-    const answer = { turnId: first.turn.turnId, optionId: 'opt_1' };
+    const answer = {
+      turnId: first.turn.turnId,
+      optionId: first.turn.options[0].id,
+    };
     const response = await request(app.getHttpServer())
       .post(`/api/sessions/${id}/responses`)
       .send(answer)

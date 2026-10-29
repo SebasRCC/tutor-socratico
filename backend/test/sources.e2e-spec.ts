@@ -15,6 +15,7 @@ import * as embeddings from '../src/rag/embeddings';
 import { EMBEDDING_DIMENSIONS } from '../src/rag/rag.types';
 import { VectorStore } from '../src/rag/vector-store';
 import type { Topic } from '../src/chat/session.types';
+import type { TutorResponseDto } from '../src/chat/dto/session-responses.dto';
 
 const mockClaude = jest.fn();
 jest.mock('@anthropic-ai/sdk', () => ({
@@ -45,6 +46,16 @@ const generatedTopics = [
   },
 ];
 
+const intervention = {
+  message:
+    'Un equipo recibe solicitudes con prioridades distintas. ¿Quién ordena el Product Backlog?',
+  options: [
+    { label: 'Product Owner' },
+    { label: 'Scrum Master' },
+    { label: 'Developers' },
+  ],
+};
+
 interface SourceResponse {
   sourceId: string;
   name: string;
@@ -68,6 +79,9 @@ describe('Carga de fuentes (e2e)', () => {
     });
     dbPath = join(tmpdir(), `tutor-sources-${randomUUID()}.db`);
     store = new VectorStore(dbPath);
+    jest
+      .spyOn(embeddings, 'generateEmbedding')
+      .mockResolvedValue(Array<number>(EMBEDDING_DIMENSIONS).fill(0.25));
     // Solo se simula el proveedor externo; fragmentación y SQLite son reales.
     generate = jest
       .spyOn(embeddings, 'generateEmbeddings')
@@ -121,6 +135,268 @@ describe('Carga de fuentes (e2e)', () => {
       }
     ).count;
   }
+
+  async function getSelection(id: string) {
+    const response = await request(app.getHttpServer())
+      .get(`/api/sessions/${id}/topics`)
+      .expect(200);
+    const { topics } = response.body as { topics: Topic[] };
+    return { topicId: topics[0].id, objectiveId: topics[0].objectives[0].id };
+  }
+
+  function sessionState(id: string) {
+    const session = app.get(SessionsService).getSession(id);
+    return {
+      topicId: session.topicId,
+      objectiveId: session.objectiveId,
+      currentTurn: session.currentTurn,
+      history: session.conversation.getHistory(),
+    };
+  }
+
+  it('genera la primera intervención con fuentes reales y recupera el mismo turno', async () => {
+    const id = await createSession();
+    const source = await upload(id);
+    const other = await createSession();
+    await upload(other);
+    const selection = await getSelection(id);
+    mockClaude.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(intervention) }],
+      stop_reason: 'end_turn',
+    });
+    const result = await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(200);
+    const response = result.body as TutorResponseDto;
+    expect(response).toMatchObject({
+      sessionId: id,
+      feedback: null,
+      turn: intervention,
+    });
+    expect(response.turn.options).toHaveLength(3);
+    expect(
+      new Set([
+        response.turn.turnId,
+        ...response.turn.options.map((option) => option.id),
+      ]).size,
+    ).toBe(4);
+    expect(response.turn.sources.length).toBeGreaterThan(0);
+    expect(response.turn.sources.length).toBeLessThanOrEqual(5);
+    for (const citation of response.turn.sources) {
+      expect(citation).toMatchObject({
+        sourceId: source.sourceId,
+        name: 'scrum.md',
+      });
+      const row = db
+        .prepare('SELECT session_id, source_id FROM chunks WHERE id = ?')
+        .get(citation.chunkId);
+      expect(row).toEqual({ session_id: id, source_id: source.sourceId });
+    }
+    const chunks = response.turn.sources.map(
+      (citation) =>
+        db
+          .prepare('SELECT heading, content FROM chunks WHERE id = ?')
+          .get(citation.chunkId) as { heading: string; content: string },
+    );
+    expect(mockClaude).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        messages: [
+          {
+            role: 'user',
+            content: JSON.stringify({
+              topic: generatedTopics[0].label,
+              objective: generatedTopics[0].objectives[0].label,
+              fragments: chunks.map(
+                (chunk) => `${chunk.heading}\n${chunk.content}`,
+              ),
+            }),
+          },
+        ],
+      }),
+    );
+    expect(embeddings.generateEmbedding).toHaveBeenCalledWith(
+      `${generatedTopics[0].label}\n${generatedTopics[0].objectives[0].label}`,
+    );
+    const saved = sessionState(id);
+    expect(saved).toMatchObject({ ...selection, currentTurn: response.turn });
+    expect(saved.history).toEqual([
+      {
+        role: 'assistant',
+        content: JSON.stringify({ feedback: null, turn: response.turn }),
+      },
+    ]);
+    await request(app.getHttpServer())
+      .get(`/api/sessions/${id}/current-turn`)
+      .expect(200)
+      .expect({ sessionId: id, turn: response.turn });
+    expect(sessionState(id)).toEqual(saved);
+    // Responder sigue usando el flujo simulado y no vuelve a consultar Anthropic.
+    const calls = mockClaude.mock.calls.length;
+    await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/responses`)
+      .send({
+        turnId: response.turn.turnId,
+        optionId: response.turn.options[0].id,
+      })
+      .expect(200);
+    expect(mockClaude).toHaveBeenCalledTimes(calls);
+  });
+
+  it('rechaza temas ajenos y objetivos de otro tema sin cambiar una sesión ya iniciada', async () => {
+    const id = await createSession();
+    await upload(id);
+    const other = await createSession();
+    await upload(other);
+    const selection = await getSelection(id);
+    mockClaude.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(intervention) }],
+      stop_reason: 'end_turn',
+    });
+    await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(200);
+    const before = sessionState(id);
+    const topics = app.get(SessionsService).getTopics(id);
+    const foreign = await getSelection(other);
+    const calls = mockClaude.mock.calls.length;
+    for (const invalid of [
+      foreign,
+      { topicId: topics[0].id, objectiveId: topics[1].objectives[0].id },
+      { topicId: 'missing', objectiveId: 'missing' },
+    ]) {
+      const result = await request(app.getHttpServer())
+        .post(`/api/sessions/${id}/learning-goal`)
+        .send(invalid)
+        .expect(400);
+      expect(result.body).toMatchObject({
+        error: { code: 'INVALID_LEARNING_GOAL' },
+      });
+      expect(sessionState(id)).toEqual(before);
+    }
+    expect(mockClaude).toHaveBeenCalledTimes(calls);
+  });
+
+  it('devuelve 422 si solo otra sesión tiene contexto, sin llamar al LLM', async () => {
+    const other = await createSession();
+    await upload(other);
+    const id = await createSession();
+    app.get(SessionsService).saveTopics(id, generatedTopics);
+    const selection = await getSelection(id);
+    const before = sessionState(id);
+    const calls = mockClaude.mock.calls.length;
+    const result = await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(422);
+    expect(result.body).toMatchObject({
+      error: { code: 'INSUFFICIENT_CONTEXT' },
+    });
+    expect(sessionState(id)).toEqual(before);
+    expect(mockClaude).toHaveBeenCalledTimes(calls);
+    expect(embeddings.generateEmbedding).not.toHaveBeenCalled();
+  });
+
+  it('descarta fragmentos sin similitud suficiente', async () => {
+    const id = await createSession();
+    await upload(id);
+    jest
+      .mocked(embeddings.generateEmbedding)
+      .mockResolvedValueOnce(Array<number>(EMBEDDING_DIMENSIONS).fill(-0.25));
+    const before = sessionState(id);
+    const selection = await getSelection(id);
+    await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(422);
+    expect(sessionState(id)).toEqual(before);
+    expect(mockClaude).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['JSON inválido', 'not JSON'],
+    ['null', 'null'],
+    ['sin mensaje', JSON.stringify({ options: intervention.options })],
+    ['mensaje vacío', JSON.stringify({ ...intervention, message: '  ' })],
+    [
+      'dos opciones',
+      JSON.stringify({
+        ...intervention,
+        options: intervention.options.slice(0, 2),
+      }),
+    ],
+    [
+      'cuatro opciones',
+      JSON.stringify({
+        ...intervention,
+        options: [...intervention.options, { label: 'Extra' }],
+      }),
+    ],
+    [
+      'label vacío',
+      JSON.stringify({
+        ...intervention,
+        options: [{ label: 'A' }, { label: 'B' }, { label: '\n' }],
+      }),
+    ],
+    [
+      'label numérico',
+      JSON.stringify({
+        ...intervention,
+        options: [{ label: 'A' }, { label: 'B' }, { label: 42 }],
+      }),
+    ],
+  ])(
+    'rechaza intervención con %s sin guardar selección ni historial',
+    async (_name, text) => {
+      const id = await createSession();
+      await upload(id);
+      const before = sessionState(id);
+      mockClaude.mockResolvedValueOnce({
+        content: [{ type: 'text', text }],
+        stop_reason: 'end_turn',
+      });
+      const selection = await getSelection(id);
+      const result = await request(app.getHttpServer())
+        .post(`/api/sessions/${id}/learning-goal`)
+        .send(selection)
+        .expect(502);
+      expect(result.body).toMatchObject({
+        error: { code: 'INVALID_LLM_OUTPUT' },
+      });
+      expect(sessionState(id)).toEqual(before);
+    },
+  );
+
+  it('conserva el turno anterior si el proveedor falla al generar una nueva intervención', async () => {
+    const id = await createSession();
+    await upload(id);
+    const selection = await getSelection(id);
+    mockClaude.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(intervention) }],
+      stop_reason: 'end_turn',
+    });
+    await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(200);
+    const before = sessionState(id);
+    mockClaude.mockRejectedValueOnce(new Error('Proveedor no disponible'));
+    await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(503);
+    expect(sessionState(id)).toEqual(before);
+    jest
+      .mocked(embeddings.generateEmbedding)
+      .mockRejectedValueOnce(new Error('Voyage no disponible'));
+    await request(app.getHttpServer())
+      .post(`/api/sessions/${id}/learning-goal`)
+      .send(selection)
+      .expect(503);
+    expect(sessionState(id)).toEqual(before);
+  });
 
   it('genera tres temas con dos objetivos y devuelve IDs idénticos en consultas repetidas', async () => {
     const id = await createSession();
