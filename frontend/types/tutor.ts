@@ -35,6 +35,7 @@ export interface TutorHistoryItem {
   question: string;
   answer: string;
   feedback: string;
+  sources: TutorSource[];
 }
 
 export interface SessionResponse {

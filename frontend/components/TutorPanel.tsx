@@ -1,4 +1,41 @@
-import type { TutorHistoryItem } from "@/types/tutor";
+import type { TutorHistoryItem, TutorSource } from "@/types/tutor";
+
+function ConsultedSources({ sources }: { sources: TutorSource[] }) {
+  if (sources.length === 0) return null;
+
+  const documents = new Map<string, { name: string; chunkIds: Set<string> }>();
+  for (const source of sources) {
+    const document = documents.get(source.sourceId) ?? {
+      name: source.name,
+      chunkIds: new Set<string>(),
+    };
+    document.chunkIds.add(source.chunkId);
+    documents.set(source.sourceId, document);
+  }
+
+  return (
+    <div className="chat-author">
+      <p>
+        Material consultado: {Array.from(documents.values()).map((document) =>
+          `${document.name} · ${document.chunkIds.size} ${document.chunkIds.size === 1 ? "fragmento" : "fragmentos"}`,
+        ).join("; ")}
+      </p>
+      <details>
+        <summary>Ver fragmentos consultados</summary>
+        {Array.from(documents.entries()).map(([sourceId, document]) => (
+          <div key={sourceId}>
+            <strong>{document.name}</strong>
+            <ul>
+              {Array.from(document.chunkIds).map((chunkId) => (
+                <li key={chunkId} style={{ overflowWrap: "anywhere" }}>{chunkId}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </details>
+    </div>
+  );
+}
 
 interface TutorQuestion {
   message: string;
@@ -8,6 +45,7 @@ interface TutorQuestion {
 interface TutorPanelProps {
   question: TutorQuestion;
   history: TutorHistoryItem[];
+  sources: TutorSource[];
   questionIndex: number;
   topicLabel: string;
   objectiveLabel: string;
@@ -18,6 +56,7 @@ interface TutorPanelProps {
 export default function TutorPanel({
   question,
   history,
+  sources,
   questionIndex,
   topicLabel,
   objectiveLabel,
@@ -82,6 +121,7 @@ export default function TutorPanel({
                     <div className="chat-bubble">
                       {item.question}
                     </div>
+                    <ConsultedSources sources={item.sources} />
                   </div>
                 </div>
 
@@ -119,6 +159,7 @@ export default function TutorPanel({
                 <div className="chat-bubble">
                   {question.message}
                 </div>
+                <ConsultedSources sources={sources} />
               </div>
             </div>
 

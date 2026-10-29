@@ -158,6 +158,7 @@ export default function Home() {
           question: answeredTurn.message,
           answer: selectedOption.label,
           feedback: result.feedback,
+          sources: answeredTurn.sources,
         },
       ]);
 
@@ -245,6 +246,7 @@ export default function Home() {
                 options: currentTurn.options.map((option) => option.label),
               }}
               history={history}
+              sources={currentTurn.sources}
               questionIndex={history.length}
               topicLabel={currentTopic?.label ?? ""}
               objectiveLabel={
