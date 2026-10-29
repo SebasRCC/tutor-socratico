@@ -2,6 +2,29 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Backend local
+
+Configura `backend/.env` usando `backend/.env.example`: `PORT=3001`, las claves
+privadas de VoyageAI y Anthropic, y los modelos indicados en el ejemplo.
+Desde `backend`, ejecuta `npm.cmd run start:dev`. Nest carga `.env` al iniciar,
+expone `/api` y permite CORS desde `http://localhost:3000`.
+
+En `frontend/.env.local`, usa las variables de `.env.example`:
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_USE_MOCK_API=false
+```
+
+Desde `frontend`, ejecuta `npm.cmd run dev` y abre `http://localhost:3000`.
+Mantén ambos servicios encendidos. Reinicia Next.js después de cambiar las variables;
+para producción, vuelve a compilar porque las variables `NEXT_PUBLIC_*` se incluyen
+en el código del navegador. Las claves privadas permanecen únicamente en el backend.
+
+El cliente conserva las funciones y rutas de `lib/api.ts`: crea una sesión, sube un
+Markdown (por ejemplo `backend/docs/academic/scrum.md`), elige tema/objetivo y responde.
+Si reinicias Nest, inicia una sesión nueva porque las sesiones se guardan en memoria.
+
 First, run the development server:
 
 ```bash

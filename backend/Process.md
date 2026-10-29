@@ -173,6 +173,18 @@ Para seguir conversando, usar el `turnId` y un ID de opción de `$siguiente`, no
 
 **Comprobaciones:** compilación, ESLint y 61 pruebas de integración correctos. Se añadieron pruebas de operación e historial enviados, bloqueo concurrente, aislamiento entre sesiones, feedback inválido, errores de contexto/proveedores y reintentos sin duplicación. Con `scrum.md`, VoyageAI y Anthropic reales, ambas operaciones respondieron `200`: la respuesta incluyó feedback no vacío, tres opciones, cinco fuentes y un turno nuevo. El historial quedó con tres mensajes, `/current-turn` coincidió, el turno anterior fue rechazado y `busy` quedó en `false`.
 
+## 9. Conectar el frontend con el backend local
+
+Configuramos Nest en `3001` (`PORT` en `backend/.env` y puerto por defecto en `main.ts`), con carga explícita de `dotenv/config` al arrancar y CORS para `http://localhost:3000`. Se conserva el prefijo `/api`.
+
+Creamos `frontend/.env.local` con `NEXT_PUBLIC_API_URL=http://localhost:3001/api` y `NEXT_PUBLIC_USE_MOCK_API=false`. Next.js carga esas variables; `frontend/lib/api.ts` conserva sus funciones y rutas sin cambios. Tampoco se modificaron componentes visuales ni el contrato.
+
+Documentamos la configuración en ambos `.env.example`, sin claves, y el arranque en `frontend/README.md`. Los archivos locales con configuración privada siguen ignorados por Git; el ejemplo del frontend sí se puede versionar.
+
+**Arranque:** en una terminal dentro de `backend`, ejecutar `npm.cmd run start:dev`; en otra dentro de `frontend`, `npm.cmd run dev`. Abrir `http://localhost:3000`. Reiniciar Next.js si cambian sus variables públicas; iniciar una sesión nueva si se reinicia Nest.
+
+**Comprobaciones:** ambos proyectos compilan; Next.js confirma la carga de `.env.local`. Se verificaron `PORT=3001` y la presencia de claves en el entorno del backend sin mostrarlas. El servidor en `3001` respondió al preflight CORS con `204`, a crear sesión con `201` y a consultar temas con `200`. Además, las funciones originales `createSession()` y `getTopics()` de `lib/api.ts` se ejecutaron contra el backend real. En esta etapa no se repitió la prueba completa con LLM desde la interfaz visual.
+
 ## Punto de continuación
 
 Tanto la primera intervención como el feedback y las intervenciones siguientes usan RAG y LLM. Las sesiones, temas, historial y bloqueos siguen en memoria y se pierden al reiniciar; el bloqueo protege un único proceso de Nest. El índice SQLite permanece en disco, pero todavía no se recuperan sesiones tras un reinicio. La calidad pedagógica y el límite de 100 palabras se solicitan mediante el prompt; la validación de código verifica el formato y los campos indicados.
