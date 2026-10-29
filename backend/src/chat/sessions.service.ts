@@ -25,6 +25,7 @@ export class SessionsService {
       topicId: null,
       objectiveId: null,
       currentTurn: null,
+      busy: false,
     };
     this.sessions.set(session.sessionId, session);
     return session;
@@ -37,6 +38,20 @@ export class SessionsService {
         error: { code: 'SESSION_NOT_FOUND', message: 'La sesión no existe' },
       });
     }
+    return session;
+  }
+
+  acquireSession(sessionId: string): Session {
+    const session = this.getSession(sessionId);
+    if (session.busy) {
+      throw new ConflictException({
+        error: {
+          code: 'SESSION_BUSY',
+          message: 'La sesión ya está procesando una intervención',
+        },
+      });
+    }
+    session.busy = true;
     return session;
   }
 
@@ -106,7 +121,7 @@ export class SessionsService {
     return turn;
   }
 
-  registerResponse(sessionId: string, dto: SubmitResponseDto): void {
+  validateResponse(sessionId: string, dto: SubmitResponseDto) {
     const session = this.getSession(sessionId);
     const turn = session.currentTurn;
     if (!turn || turn.turnId !== dto.turnId) {
@@ -126,14 +141,17 @@ export class SessionsService {
         },
       });
     }
-    session.conversation.addUserMessage(
+    return { turn, option };
+  }
+
+  registerResponse(sessionId: string, dto: SubmitResponseDto): void {
+    const { turn, option } = this.validateResponse(sessionId, dto);
+    this.getSession(sessionId).conversation.addUserMessage(
       JSON.stringify({
         turnId: turn.turnId,
         optionId: option.id,
         text: option.label,
       }),
     );
-    // El turno queda consumido antes de guardar la siguiente intervención.
-    session.currentTurn = null;
   }
 }

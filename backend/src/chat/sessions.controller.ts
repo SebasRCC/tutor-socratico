@@ -1,4 +1,4 @@
-// sessions.controller.ts
+﻿// sessions.controller.ts
 import {
   Body,
   Controller,
@@ -10,7 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { randomUUID } from 'node:crypto';
+
 import { SelectLearningGoalDto } from './dto/select-learning-goal.dto';
 import { SubmitResponseDto } from './dto/submit-response.dto';
 import type { TutorResponseDto } from './dto/session-responses.dto';
@@ -71,11 +71,8 @@ export class SessionsController {
   respond(
     @Param('sessionId') sessionId: string,
     @Body() dto: SubmitResponseDto,
-  ): TutorResponseDto {
-    this.sessionsService.registerResponse(sessionId, dto);
-    return this.sessionsService.saveTurn(
-      this.mockTurn(sessionId, 'Retroalimentación de prueba.'),
-    );
+  ): Promise<TutorResponseDto> {
+    return this.tutorService.respond(sessionId, dto);
   }
 
   @Get(':sessionId/current-turn')
@@ -83,25 +80,5 @@ export class SessionsController {
     @Param('sessionId') sessionId: string,
   ): Pick<TutorResponseDto, 'sessionId' | 'turn'> {
     return { sessionId, turn: this.sessionsService.getCurrentTurn(sessionId) };
-  }
-
-  private mockTurn(
-    sessionId: string,
-    feedback: string | null,
-  ): TutorResponseDto {
-    return {
-      sessionId,
-      feedback,
-      turn: {
-        turnId: randomUUID(),
-        message: '¿Quién responde por maximizar el valor del producto?',
-        options: [
-          { id: 'opt_1', label: 'Product Owner' },
-          { id: 'opt_2', label: 'Scrum Master' },
-          { id: 'opt_3', label: 'Developers' },
-        ],
-        sources: [],
-      },
-    };
   }
 }

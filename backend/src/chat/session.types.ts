@@ -14,4 +14,5 @@ export interface Session {
   topicId: string | null;
   objectiveId: string | null;
   currentTurn: TutorResponseDto['turn'] | null;
+  busy: boolean;
 }

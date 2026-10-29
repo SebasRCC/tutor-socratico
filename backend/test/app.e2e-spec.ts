@@ -31,15 +31,25 @@ describe('Sesiones e historial (e2e)', () => {
     jest
       .spyOn(embeddings, 'generateEmbedding')
       .mockResolvedValue(Array<number>(EMBEDDING_DIMENSIONS).fill(0.25));
-    jest.spyOn(app.get(LlmService), 'generateIntervention').mockResolvedValue({
-      message:
-        'Un equipo recibe varias solicitudes. ¿Quién ordena el Product Backlog?',
-      options: [
-        { label: 'Product Owner' },
-        { label: 'Scrum Master' },
-        { label: 'Developers' },
-      ],
-    });
+    jest
+      .spyOn(app.get(LlmService), 'generateTutorResponse')
+      .mockImplementation((input) =>
+        Promise.resolve({
+          feedback:
+            input.operation === 'PRIMERA_INTERVENCION'
+              ? null
+              : 'El Product Owner responde por ordenar el Product Backlog.',
+          turn: {
+            message:
+              'Un equipo recibe varias solicitudes. ¿Quién ordena el Product Backlog?',
+            options: [
+              { label: 'Product Owner' },
+              { label: 'Scrum Master' },
+              { label: 'Developers' },
+            ],
+          },
+        }),
+      );
   });
 
   afterEach(async () => {

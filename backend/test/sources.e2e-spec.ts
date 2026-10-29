@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+﻿import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
@@ -161,7 +161,12 @@ describe('Carga de fuentes (e2e)', () => {
     await upload(other);
     const selection = await getSelection(id);
     mockClaude.mockResolvedValueOnce({
-      content: [{ type: 'text', text: JSON.stringify(intervention) }],
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ feedback: null, turn: intervention }),
+        },
+      ],
       stop_reason: 'end_turn',
     });
     const result = await request(app.getHttpServer())
@@ -205,6 +210,7 @@ describe('Carga de fuentes (e2e)', () => {
           {
             role: 'user',
             content: JSON.stringify({
+              operation: 'PRIMERA_INTERVENCION',
               topic: generatedTopics[0].label,
               objective: generatedTopics[0].objectives[0].label,
               fragments: chunks.map(
@@ -231,7 +237,18 @@ describe('Carga de fuentes (e2e)', () => {
       .expect(200)
       .expect({ sessionId: id, turn: response.turn });
     expect(sessionState(id)).toEqual(saved);
-    // Responder sigue usando el flujo simulado y no vuelve a consultar Anthropic.
+    mockClaude.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            feedback: 'Revisa la responsabilidad sobre el valor.',
+            turn: intervention,
+          }),
+        },
+      ],
+      stop_reason: 'end_turn',
+    });
     const calls = mockClaude.mock.calls.length;
     await request(app.getHttpServer())
       .post(`/api/sessions/${id}/responses`)
@@ -240,7 +257,7 @@ describe('Carga de fuentes (e2e)', () => {
         optionId: response.turn.options[0].id,
       })
       .expect(200);
-    expect(mockClaude).toHaveBeenCalledTimes(calls);
+    expect(mockClaude).toHaveBeenCalledTimes(calls + 1);
   });
 
   it('rechaza temas ajenos y objetivos de otro tema sin cambiar una sesión ya iniciada', async () => {
@@ -250,7 +267,12 @@ describe('Carga de fuentes (e2e)', () => {
     await upload(other);
     const selection = await getSelection(id);
     mockClaude.mockResolvedValueOnce({
-      content: [{ type: 'text', text: JSON.stringify(intervention) }],
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ feedback: null, turn: intervention }),
+        },
+      ],
       stop_reason: 'end_turn',
     });
     await request(app.getHttpServer())
@@ -354,7 +376,17 @@ describe('Carga de fuentes (e2e)', () => {
       await upload(id);
       const before = sessionState(id);
       mockClaude.mockResolvedValueOnce({
-        content: [{ type: 'text', text }],
+        content: [
+          {
+            type: 'text',
+            text: text.startsWith('{')
+              ? JSON.stringify({
+                  feedback: null,
+                  turn: JSON.parse(text) as unknown,
+                })
+              : text,
+          },
+        ],
         stop_reason: 'end_turn',
       });
       const selection = await getSelection(id);
@@ -374,7 +406,12 @@ describe('Carga de fuentes (e2e)', () => {
     await upload(id);
     const selection = await getSelection(id);
     mockClaude.mockResolvedValueOnce({
-      content: [{ type: 'text', text: JSON.stringify(intervention) }],
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ feedback: null, turn: intervention }),
+        },
+      ],
       stop_reason: 'end_turn',
     });
     await request(app.getHttpServer())

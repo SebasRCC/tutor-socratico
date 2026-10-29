@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+﻿import Anthropic from '@anthropic-ai/sdk';
 import {
   BadGatewayException,
   Injectable,
@@ -8,11 +8,8 @@ import {
   TOPICS_PROMPT,
   TOPICS_OUTPUT_SCHEMA,
 } from '../chat/prompts/topics.prompt';
-import type { GeneratedTopic, GeneratedIntervention } from './llm.types';
-import {
-  SOCRATIC_TUTOR_PROMPT,
-  INTERVENTION_OUTPUT_SCHEMA,
-} from '../chat/prompts/socratic-tutor.prompt';
+import type { GeneratedTopic, TutorInput } from './llm.types';
+import { INTERVENTION_OUTPUT_SCHEMA } from '../chat/prompts/socratic-tutor.prompt';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -81,42 +78,23 @@ export class LlmService {
     });
   }
 
-  async generateIntervention(
-    topic: string,
-    objective: string,
-    fragments: string[],
-  ): Promise<GeneratedIntervention> {
+  async generateTutorResponse(
+    input: TutorInput,
+    systemPrompt: string,
+  ): Promise<unknown> {
     const errorMessage = 'No se pudo generar una intervención válida';
     const text = await this.askClaude(
-      JSON.stringify({ topic, objective, fragments }),
-      SOCRATIC_TUTOR_PROMPT,
+      JSON.stringify(input),
+      systemPrompt,
       INTERVENTION_OUTPUT_SCHEMA,
       errorMessage,
     );
-    let result: unknown;
     try {
-      result = JSON.parse(text);
+      return JSON.parse(text) as unknown;
     } catch {
       throw invalidOutput(errorMessage);
     }
-    if (
-      !isObject(result) ||
-      typeof result.message !== 'string' ||
-      !result.message.trim() ||
-      !Array.isArray(result.options) ||
-      result.options.length !== 3
-    ) {
-      throw invalidOutput(errorMessage);
-    }
-    return {
-      message: result.message.trim(),
-      options: result.options.map((option: unknown) => {
-        if (!hasLabel(option)) throw invalidOutput(errorMessage);
-        return { label: option.label.trim() };
-      }),
-    };
   }
-
   private async askClaude(
     prompt: string,
     systemPrompt: string,

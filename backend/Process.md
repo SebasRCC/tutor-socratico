@@ -149,6 +149,30 @@ La comparación debe devolver `True`.
 
 **Comprobaciones:** compilación, ESLint y 40 pruebas de integración correctos. Se verificaron aislamiento de contexto, fuentes reales, selección inválida sin cambios, errores de proveedores y salidas mal formadas sin guardar estado. La prueba con `scrum.md`, VoyageAI y Anthropic reales devolvió `200`, tres opciones y cinco fuentes de los seis fragmentos indexados; `/current-turn` coincidió y una selección inválida conservó la sesión. La prueba utilizó SQLite en memoria.
 
+## 8. Procesar respuestas con el mismo prompt socrático
+
+Incorporamos el contenido de `socratic-prompt.md` en `chat/prompts/socratic-tutor.prompt.ts`, como constante de código: el servidor no lee el Markdown en ejecución. `TutorService` envía el mismo `SOCRATIC_TUTOR_PROMPT` como mensaje de sistema tanto para `PRIMERA_INTERVENCION` como para `PROCESAR_RESPUESTA`. El prompt de temas permanece separado.
+
+Adaptamos `LlmService.generateTutorResponse()` para reutilizar la llamada a Anthropic y devolver JSON al coordinador. El esquema estructurado admite una respuesta con `{ feedback, turn }` o el error `INSUFFICIENT_CONTEXT`. `TutorService` valida la estructura: mensaje y labels no vacíos, exactamente tres opciones, feedback `null` al iniciar y texto no vacío al responder. JSON o estructura inválidos producen `502 / INVALID_LLM_OUTPUT`; contexto insuficiente detectado por RAG o informado por el modelo produce `422 / INSUFFICIENT_CONTEXT`.
+
+**Flujo de `/responses`:** comprobar sesión y adquirir su marca `busy` → validar turno y opción → obtener tema/objetivo e historial mediante `getHistory()` → recuperar contexto usando tema, objetivo, pregunta actual y texto elegido → enviar operación, historial, turno, opción (ID y texto) y fragmentos al LLM → validar → generar IDs y fuentes desde Nest → guardar estudiante, asistente y nuevo turno → responder `200`.
+
+Reutilizamos la recuperación RAG adaptada de `retrieveContext()` y los métodos de `Conversation` del repo. La coordinación, validación y control de concurrencia pertenecen a Nest; no se usa `runWithTools()` ni un bucle de agentes.
+
+La marca `busy` protege ambas operaciones: otra respuesta o cambio de objetivo en curso devuelve `409 / SESSION_BUSY`. Se libera en `finally`, también ante fallos. Mientras se genera la respuesta, `/current-turn` sigue mostrando el turno anterior. El historial y turno solo cambian tras validar toda la salida; el guardado de los dos mensajes y el nuevo turno es síncrono, sin `await` intermedios. Un fallo permite reintentar el mismo turno sin duplicar mensajes; un turno ya respondido sigue devolviendo `409 / TURN_NOT_CURRENT`.
+
+Para continuar la prueba anterior, ejecutar por separado (la elección del índice `0` es solo un ejemplo):
+
+```powershell
+$respuesta = @{ turnId = $primera.turn.turnId; optionId = $primera.turn.options[0].id } | ConvertTo-Json
+$siguiente = Invoke-RestMethod -Method Post -Uri "$base/sessions/$id/responses" -ContentType "application/json" -Body $respuesta
+$siguiente | ConvertTo-Json -Depth 10
+```
+
+Para seguir conversando, usar el `turnId` y un ID de opción de `$siguiente`, no los de la pregunta anterior.
+
+**Comprobaciones:** compilación, ESLint y 61 pruebas de integración correctos. Se añadieron pruebas de operación e historial enviados, bloqueo concurrente, aislamiento entre sesiones, feedback inválido, errores de contexto/proveedores y reintentos sin duplicación. Con `scrum.md`, VoyageAI y Anthropic reales, ambas operaciones respondieron `200`: la respuesta incluyó feedback no vacío, tres opciones, cinco fuentes y un turno nuevo. El historial quedó con tres mensajes, `/current-turn` coincidió, el turno anterior fue rechazado y `busy` quedó en `false`.
+
 ## Punto de continuación
 
-La primera intervención ya usa RAG y LLM. El siguiente paso será sustituir el feedback y la siguiente intervención simulados de `/responses`. Las sesiones, los temas y el historial siguen en memoria y se pierden al reiniciar; el índice SQLite permanece en disco, pero todavía no se recuperan sesiones tras un reinicio.
+Tanto la primera intervención como el feedback y las intervenciones siguientes usan RAG y LLM. Las sesiones, temas, historial y bloqueos siguen en memoria y se pierden al reiniciar; el bloqueo protege un único proceso de Nest. El índice SQLite permanece en disco, pero todavía no se recuperan sesiones tras un reinicio. La calidad pedagógica y el límite de 100 palabras se solicitan mediante el prompt; la validación de código verifica el formato y los campos indicados.
