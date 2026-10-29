@@ -22,19 +22,16 @@ export default function FileUploader({
         ← Volver al inicio
       </button>
 
-      <span className="eyebrow">PASO 01 · PREPARA TU SESIÓN</span>
-      <h1 className="page-title">Comencemos por tus ideas.</h1>
+      <span className="page-title">PASO 01 · PREPAREMOS LA SESIÓN</span>
       <p className="page-description">
-        Comparte el material que quieres estudiar. El tutor lo utilizará
-        como base para acompañarte durante el aprendizaje.
+        Sube el material
       </p>
 
       <div className="upload-card">
         <div className="upload-card-heading">
-          <div className="feature-icon lilac">↥</div>
+
           <div>
-            <h3>Material de estudio</h3>
-            <p>Selecciona un archivo Markdown de tu dispositivo.</p>
+            <h3>Selecciona un archivo Markdown de tu dispositivo.</h3>
           </div>
         </div>
 
@@ -61,13 +58,7 @@ export default function FileUploader({
 
         {error && <p className="error-message">{error}</p>}
 
-        <div className="privacy-note">
-          <span>ⓘ</span>
-            <p>
-              Tu material se utilizará para preparar la sesión de aprendizaje
-              y generar preguntas basadas en su contenido.
-            </p>
-        </div>
+
 
         <div className="card-actions">
           <button className="secondary-button" onClick={onCancel}>

@@ -68,13 +68,7 @@ export default function Sidebar({ stage, onReset }: SidebarProps) {
 
       <div className="sidebar-spacer" />
 
-      <div className="sidebar-tip">
-        <div className="tip-icon">✳</div>
-        <strong>Aprender es pensar</strong>
-        <p>
-          Las mejores respuestas comienzan con buenas preguntas.
-        </p>
-      </div>
+
 
       <div className="profile">
         <div className="avatar">E</div>

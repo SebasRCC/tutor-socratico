@@ -38,10 +38,7 @@ export default function TutorPanel({
     <div className="tutor-container">
       <div className="tutor-heading">
         <div>
-          <span className="eyebrow">
-            PASO 03 · EXPLOREMOS JUNTOS
-          </span>
-          <h1 className="page-title">Tu espacio para pensar.</h1>
+          <h1 className="page-title">PASO 03 · EXPLOREMOS JUNTOS</h1>
           <p className="page-description">
             Cada respuesta abre una nueva pregunta. Construyamos
             tu aprendizaje juntos.
@@ -198,14 +195,7 @@ export default function TutorPanel({
             </small>
           </div>
 
-          <div className="reflection-card">
-            <span className="reflection-icon">✳</span>
-            <h3>Un recordatorio</h3>
-            <p>
-              No busques solamente acertar. Piensa por qué una
-              opción tiene sentido para ti.
-            </p>
-          </div>
+
         </aside>
       </div>
     </div>

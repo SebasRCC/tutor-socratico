@@ -41,7 +41,7 @@ button {
 
 button:focus-visible,
 input:focus-visible {
-  outline: 3px solid #b9b0ff;
+  outline: 3px solid #f7c56b;
   outline-offset: 3px;
 }
 
@@ -205,9 +205,9 @@ button:disabled {
 
 .sidebar-tip {
   padding: 17px;
-  border: 1px solid #eeebff;
+  border: 1px solid #ffecd2;
   border-radius: 12px;
-  background: #f9f7ff;
+  background: #fff9f0;
 }
 
 .tip-icon {
@@ -242,7 +242,7 @@ button:disabled {
   height: 36px;
   place-items: center;
   border-radius: 50%;
-  background: #e9e5ff;
+  background: #fff0d6;
   color: var(--orange-dark);
   font-weight: 800;
 }
@@ -334,7 +334,7 @@ button:disabled {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 38px 5.3% 18px;
+  padding: auto 5.3% 18px;
 }
 
 .welcome-banner {
@@ -342,9 +342,9 @@ button:disabled {
   display: flex;
   min-height: 360px;
   overflow: hidden;
-  border: 1px solid #e7e3ff;
+  border: 1px solid #ffe8c7;
   border-radius: 19px;
-  background: linear-gradient(112deg, #f1eeff 0%, #f8f6ff 54%, #e9f7f2 100%);
+  background: linear-gradient(112deg, #fffeee 0%, #fffee3 54%, #cfefff 100%);
 }
 
 .welcome-copy {
@@ -355,7 +355,7 @@ button:disabled {
 }
 
 .eyebrow {
-  color: #8c7fe0;
+  color: #d97706;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1.5px;
@@ -405,7 +405,7 @@ button:disabled {
 .primary-button {
   background: var(--orange);
   color: white;
-  box-shadow: 0 4px 12px rgb(107 92 231 / 15%);
+  box-shadow: 0 4px 12px rgb(217 119 6 / 15%);
 }
 
 .primary-button:hover:not(:disabled) {
@@ -424,7 +424,7 @@ button:disabled {
 }
 
 .secondary-button:hover {
-  background: #f7f6ff;
+  background: #fff8ee;
 }
 
 .banner-footnote {
@@ -450,7 +450,7 @@ button:disabled {
   position: absolute;
   top: 50%;
   left: 50%;
-  border: 1px solid rgb(128 111 222 / 19%);
+  border: 1px solid rgb(245 166 35 / 25%);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
@@ -469,7 +469,7 @@ button:disabled {
   position: absolute;
   top: 14%;
   right: 19%;
-  color: #9c8beb;
+  color: #0051ff;
   font-size: 42px;
 }
 
@@ -481,7 +481,7 @@ button:disabled {
   width: 190px;
   height: 140px;
   transform: translate(-50%, -45%) rotate(-7deg);
-  filter: drop-shadow(0 15px 14px rgb(72 58 149 / 13%));
+  filter: drop-shadow(0 15px 14px rgb(180 83 9 / 13%));
 }
 
 .book-page {
@@ -491,7 +491,7 @@ button:disabled {
   justify-content: center;
   gap: 12px;
   padding: 17px;
-  border: 1px solid #dcd6ff;
+  border: 1px solid #ffdca8;
   background: #fff;
 }
 
@@ -508,7 +508,7 @@ button:disabled {
 .book-page span {
   height: 4px;
   border-radius: 5px;
-  background: #e2ddff;
+  background: #ffe8bd;
 }
 
 .book-page span:nth-child(2) {
@@ -526,11 +526,11 @@ button:disabled {
 .floating-note {
   position: absolute;
   padding: 10px 15px;
-  border: 1px solid #eeebff;
+  border: 1px solid #ffecd2;
   border-radius: 10px;
   background: white;
-  box-shadow: 0 8px 25px rgb(68 55 127 / 8%);
-  color: #6a5ad1;
+  box-shadow: 0 8px 25px rgb(180 83 9 / 8%);
+  color: #0051ff;
   font-size: 11px;
   font-weight: 700;
 }
@@ -565,7 +565,7 @@ button:disabled {
   left: 22%;
   width: 8px;
   height: 8px;
-  background: #b3a5f6;
+  background: #f6bf72;
 }
 
 .section-heading {
@@ -617,8 +617,8 @@ button:disabled {
 }
 
 .lilac {
-  background: #f0edff;
-  color: #7565dc;
+  background: #fff0d6;
+  color: #d97706;
 }
 
 .mint {
@@ -737,16 +737,16 @@ button:disabled {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  border: 1px dashed #c9c2f5;
+  border: 1px dashed #f0b35a;
   border-radius: 12px;
-  background: #fbfaff;
+  background: #faf5ed;
   cursor: pointer;
   text-align: center;
   transition: background 150ms ease;
 }
 
 .dropzone:hover {
-  background: #f5f2ff;
+  background: #ffe5b8;
 }
 
 .dropzone input {
@@ -759,7 +759,7 @@ button:disabled {
   height: 48px;
   margin-bottom: 15px;
   place-items: center;
-  border: 1px solid #e7e1ff;
+  border: 1px solid #ffe7c2;
   border-radius: 14px;
   background: white;
   color: var(--orange);
@@ -782,8 +782,8 @@ button:disabled {
   margin-top: 16px;
   padding: 6px 10px;
   border-radius: 5px;
-  background: #eeeaff;
-  color: #7565dc;
+  background: #ffe3b0;
+  color: #000000;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -795,7 +795,7 @@ button:disabled {
   margin-top: 17px;
   padding: 12px;
   border-radius: 8px;
-  background: #f7f8fc;
+  background: #fff9ed;
   color: #85899d;
 }
 
@@ -849,8 +849,8 @@ button:disabled {
 
 .topic-card:hover,
 .topic-card.topic-selected {
-  border-color: #a89cf3;
-  background: #faf9ff;
+  border-color: #e39a28;
+  background: #fffaf2;
 }
 
 .topic-symbol {
@@ -860,7 +860,7 @@ button:disabled {
   margin-bottom: 17px;
   place-items: center;
   border-radius: 10px;
-  background: #f0edff;
+  background: #fff0d6;
   color: var(--orange);
   font-size: 20px;
 }
@@ -954,8 +954,8 @@ button:disabled {
 }
 
 .objective-selected {
-  border-color: #a89cf3;
-  background: #faf9ff;
+  border-color: #e39a28;
+  background: #fffaf2;
   color: var(--ink);
 }
 
@@ -1043,8 +1043,8 @@ button:disabled {
   margin-left: auto;
   padding: 6px 8px;
   border-radius: 5px;
-  background: #f2efff;
-  color: #7565dc;
+  background: #fff1dc;
+  color: #d97706;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.7px;
@@ -1055,7 +1055,7 @@ button:disabled {
 }
 
 .message-label {
-  color: #8d81d8;
+  color: #d97706;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 1.1px;
@@ -1102,8 +1102,8 @@ button:disabled {
 }
 
 .answer-option:hover {
-  border-color: #b6adf4;
-  background: #faf9ff;
+  border-color: #efb45e;
+  background: #fffaf2;
 }
 
 .option-letter {
@@ -1112,10 +1112,10 @@ button:disabled {
   height: 26px;
   flex-shrink: 0;
   place-items: center;
-  border: 1px solid #e9e5ff;
+  border: 1px solid #ffe8c7;
   border-radius: 7px;
-  background: #f6f4ff;
-  color: #7768d7;
+  background: #fff5e6;
+  color: #c96b05;
   font-size: 10px;
   font-weight: 800;
 }
@@ -1237,11 +1237,11 @@ button:disabled {
 
 .principle-card {
   padding: 20px;
-  background: linear-gradient(145deg, #f0edff, #faf8ff);
+  background: linear-gradient(145deg, #fff0d6, #fffaf2);
 }
 
 .principle-icon {
-  color: #8a7be3;
+  color: #d97706;
   font-family: Georgia, serif;
   font-size: 42px;
   line-height: 1;
@@ -1598,13 +1598,13 @@ button:disabled {
 }
 
 .chat-avatar {
-  background: #eee8ff;
-  color: #7454c8;
+  background: #ffecd2;
+  color: #c45f00;
 }
 
 .student-avatar {
-  background: #dcd2ff;
-  color: #6043b2;
+  background: #ffd08a;
+  color: #a94f00;
 }
 
 .chat-message-content {
@@ -1627,7 +1627,7 @@ button:disabled {
 .chat-bubble {
   padding: 14px 16px;
   border-radius: 4px 16px 16px 16px;
-  background: #f5f3fa;
+  background: #fff8ef;
   color: #343044;
   font-size: 14px;
   line-height: 1.7;
@@ -1635,7 +1635,7 @@ button:disabled {
 }
 
 .student-message .chat-bubble {
-  background: #e9e2ff;
+  background: #ffe0ad;
   border-radius: 16px 4px 16px 16px;
 }
 
@@ -1669,7 +1669,7 @@ button:disabled {
   gap: 12px;
   width: 100%;
   padding: 14px;
-  border: 1px solid #e7e2f0;
+  border: 1px solid #f1dfca;
   border-radius: 12px;
   background: white;
   color: #343044;
@@ -1682,8 +1682,8 @@ button:disabled {
 }
 
 .chat-options .answer-option:hover {
-  border-color: #9b83e8;
-  background: #faf8ff;
+  border-color: #e39a28;
+  background: #fffaf2;
   transform: translateY(-1px);
 }
 
@@ -1695,15 +1695,15 @@ button:disabled {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: #f0ecfa;
-  color: #7156bc;
+  background: #fff0dc;
+  color: #b85b00;
   font-weight: 700;
   font-size: 12px;
 }
 
 .chat-options .option-arrow {
   margin-left: auto;
-  color: #8b79c8;
+  color: #c66a0a;
 }
 
 @media (max-width: 640px) {
@@ -1721,4 +1721,3 @@ button:disabled {
     margin-left: 0;
   }
 }
-
