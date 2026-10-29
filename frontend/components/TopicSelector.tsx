@@ -42,8 +42,7 @@ export default function TopicSelector({
         ← Volver al material
       </button>
 
-      <span className="eyebrow">PASO 02 · ELIGE TU DIRECCIÓN</span>
-      <h1 className="page-title">¿Qué quieres descubrir?</h1>
+      <h1 className="page-title">PASO 02 · ELIGE TU DIRECCIÓN</h1>
       <p className="page-description">
         El aprendizaje funciona mejor cuando tienes una meta clara.
         Escoge el tema que más te interese y define tu objetivo.
@@ -103,7 +102,7 @@ export default function TopicSelector({
       {error && <p className="error-message">{error}</p>}
 
       <div className="workflow-footer">
-        <span>✦ No necesitas saberlo todo para comenzar.</span>
+
         <button
           className="primary-button"
           disabled={!selectedTopic || !selectedObjective}

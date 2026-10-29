@@ -22,7 +22,7 @@ export default function WelcomeScreen({
             nunc, eget aliquam nisl nunc euismod nunc.
           </p>
 
-          <button className="primary-button" onClick={onStart}>
+          <button className="primary-button text-xl" onClick={onStart}>
             Comenzar a aprender <span>→</span>
           </button>
 
@@ -59,43 +59,6 @@ export default function WelcomeScreen({
         </div>
       </div>
 
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">TU EXPERIENCIA</span>
-          <h2>Una forma diferente de aprender</h2>
-        </div>
-
-        <span className="muted-label">Tres pasos sencillos</span>
-      </div>
-
-      <div className="feature-grid">
-        <article className="feature-card">
-          <div className="feature-icon lilac">↗</div>
-          <span className="feature-index">01 / PREPARA</span>
-          <h3>Tu material, tu camino</h3>
-          <p>
-            Comienza con tus propios apuntes y contenido de estudio.
-          </p>
-        </article>
-
-        <article className="feature-card">
-          <div className="feature-icon mint">◎</div>
-          <span className="feature-index">02 / ENFOCA</span>
-          <h3>Define qué aprender</h3>
-          <p>
-            Elige un tema y un objetivo que quieras comprender mejor.
-          </p>
-        </article>
-
-        <article className="feature-card">
-          <div className="feature-icon peach">✳</div>
-          <span className="feature-index">03 / DESCUBRE</span>
-          <h3>Piensa por ti mismo</h3>
-          <p>
-            Responde preguntas y descubre nuevas formas de razonar.
-          </p>
-        </article>
-      </div>
     </>
   );
 }

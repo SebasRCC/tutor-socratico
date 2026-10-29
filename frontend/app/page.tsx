@@ -274,13 +274,7 @@ export default function Home() {
             </p>
           )}
 
-          <footer className="app-footer">
-            <span>:v</span>
-            <span>
-              Hecho para aprender pensando{" "}
-              <span className="footer-star">✳</span>
-            </span>
-          </footer>
+
         </div>
       </section>
     </main>
